@@ -1,14 +1,38 @@
 from app import app
-from flask import render_template, request, redirect
-import sqlite3
+from flask import render_template, request, redirect, jsonify
+import sqlite3, datetime, jwt
 from app.database import init_db
 
 init_db()
 
+SECRET_KEY = "ITS_SECRET_2026"
+
 @app.route('/')
 def home():
-    return redirect('/new')
+    return redirect('/login')
 
+# ---------- LOGIN ----------
+@app.route('/login')
+def login_page():
+    return render_template("login.html")
+
+@app.route('/login', methods=['POST'])
+def login():
+    user = request.form['username']
+    pwd = request.form['password']
+
+    if user == "admin" and pwd == "admin":
+        token = jwt.encode({
+            "user": user,
+            "exp": datetime.datetime.utcnow() + datetime.timedelta(minutes=30)
+        }, SECRET_KEY, algorithm="HS256")
+
+        return render_template("token.html", token=token)
+
+    return "Accès refusé"
+
+
+# ---------- AJOUT PATIENT ----------
 @app.route('/new')
 def new():
     return render_template("new.html")
@@ -25,11 +49,21 @@ def add_patient():
                 (nom, adresse, pin))
     conn.commit()
     conn.close()
+    return redirect('/new')
 
-    return redirect('/list')
-
+# ---------- LISTE PROTÉGÉE ----------
 @app.route('/list')
 def list_patients():
+    token = request.args.get("token")
+
+    if not token:
+        return "Token requis"
+
+    try:
+        jwt.decode(token, SECRET_KEY, algorithms=["HS256"])
+    except:
+        return "Token invalide"
+
     conn = sqlite3.connect("sante.db")
     cur = conn.cursor()
     cur.execute("SELECT * FROM patients")
