@@ -1,16 +1,27 @@
-from flask import Flask, jsonify, request
+from flask import Flask, jsonify, request, Response
+import json
 
 app = Flask(__name__)
+app.config['JSON_AS_ASCII'] = False  # IMPORTANT POUR UTF-8
 
-## EXO1: API GET: renvoyer un helloworld - API end point name: "api/salutation"
+@app.route('/api/salutation', methods=['GET'])
+def salutation():
+    return jsonify({"message": "Hello World"})
 
-## EXO2: API POST: renvoyer un nom fourni en parametre - API end point name: "api/utilisateurs"
+@app.route('/api/utilisateurs', methods=['POST'])
+def creer_utilisateur():
+    data = request.get_json()
+    nom = data.get("nom")
 
-# to be tested with curl
+    response = {
+        "message": "Utilisateur reçu",
+        "nom": nom
+    }
 
-# Commandes bash (attention, à adapter pour powershell)
-# >> curl -i -X GET http://localhost:5000/api/salutation
-# >> curl -i -X POST -H 'Content-Type: application/json' -d '{"nom": "Bob"}' http://localhost:5000/api/utilisateurs
+    return Response(
+        json.dumps(response, ensure_ascii=False),
+        content_type="application/json; charset=utf-8"
+    )
 
 if __name__ == '__main__':
     app.run(debug=True)
