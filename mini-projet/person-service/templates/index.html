@@ -1,0 +1,11 @@
+<h1>Gestion des personnes</h1>
+<form method="post" action="/add">
+    <input name="name" placeholder="Nom">
+    <button>Ajouter</button>
+</form>
+
+<ul>
+{% for p in persons %}
+<li>{{p.id}} - {{p.name}} <a href="/delete/{{p.id}}">❌</a></li>
+{% endfor %}
+</ul>

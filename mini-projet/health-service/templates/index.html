@@ -1,0 +1,14 @@
+<h1>Santé</h1>
+<form method="post">
+ID <input name="id"><br>
+Poids <input name="poids"><br>
+Taille <input name="taille"><br>
+Tension <input name="tension"><br>
+<button>OK</button>
+</form>
+
+<ul>
+{% for k,v in data.items() %}
+<li>ID {{k}} → {{v}}</li>
+{% endfor %}
+</ul>
