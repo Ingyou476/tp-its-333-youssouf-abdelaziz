@@ -1,11 +1,31 @@
-<h1>Gestion des personnes</h1>
-<form method="post" action="/add">
-    <input name="name" placeholder="Nom">
-    <button>Ajouter</button>
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<style>
+body{background:#ecf0f1;font-family:Arial}
+.card{background:white;width:500px;margin:40px auto;padding:20px;border-radius:10px}
+input,button{padding:8px}
+table{width:100%}
+th{background:#3498db;color:white}
+td,th{padding:6px}
+button{background:#2ecc71;border:none}
+</style>
+</head>
+<body>
+<div class="card">
+<h2>Personnes</h2>
+<form method="post" action="/add?token={{token}}">
+<input name="name" placeholder="Nom">
+<button>Ajouter</button>
 </form>
-
-<ul>
+<table>
+<tr><th>ID</th><th>Nom</th></tr>
 {% for p in persons %}
-<li>{{p.id}} - {{p.name}} <a href="/delete/{{p.id}}">❌</a></li>
+<tr><td>{{p[0]}}</td><td>{{p[1]}}</td></tr>
 {% endfor %}
-</ul>
+</table>
+<a href="http://localhost:5002/?token={{token}}">➡ Santé</a>
+</div>
+</body>
+</html>

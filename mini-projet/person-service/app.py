@@ -1,66 +1,75 @@
-from flask import Flask, request, jsonify, redirect
-from flask_sqlalchemy import SQLAlchemy
-import jwt, requests
+from flask import Flask, request, render_template, redirect, jsonify
+import sqlite3, jwt, os
 
+SECRET = "MICROSERVICE_SECRET"
 app = Flask(__name__)
-app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///database.db'
-app.config['SECRET_KEY'] = "secret"
-db = SQLAlchemy(app)
 
-class Person(db.Model):
-    id = db.Column(db.Integer, primary_key=True)
-    name = db.Column(db.String(100), nullable=False)
+DB_PATH = "persons.db"
 
+# --- Connexion DB sécurisée pour Docker ---
+def get_db():
+    return sqlite3.connect(DB_PATH, check_same_thread=False)
+
+# --- Création table au démarrage ---
+with get_db() as db:
+    db.execute("""
+        CREATE TABLE IF NOT EXISTS persons(
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name TEXT NOT NULL
+        )
+    """)
+    db.commit()
+
+# --- Vérification JWT ---
+def valid(token):
+    try:
+        jwt.decode(token, SECRET, algorithms=["HS256"])
+        return True
+    except:
+        return False
+
+# --- Page Web ---
 @app.route("/")
 def home():
-    persons = Person.query.all()
-    return """
-    <style>
-    body{font-family:Arial;background:#f4f6f9;padding:40px}
-    table{border-collapse:collapse;width:50%;background:white}
-    th,td{padding:12px;border-bottom:1px solid #ddd}
-    th{background:#007bff;color:white}
-    a{color:red;text-decoration:none}
-    </style>
+    token = request.args.get("token")
+    if not valid(token):
+        return "Unauthorized", 401
 
-    <h2>Gestion des personnes</h2>
-    <form action="/add" method="post">
-      <input name="name" placeholder="Nom" required>
-      <button>Ajouter</button>
-    </form><br>
+    with get_db() as db:
+        persons = db.execute("SELECT * FROM persons").fetchall()
 
-    <table>
-    <tr><th>ID</th><th>Nom</th><th>Action</th></tr>
-    """ + "".join([
-        f"<tr><td>{p.id}</td><td>{p.name}</td><td><a href='/delete/{p.id}'>❌</a></td></tr>"
-        for p in persons
-    ]) + "</table>"
+    return render_template("index.html", persons=persons, token=token)
 
+# --- Ajouter personne ---
 @app.route("/add", methods=["POST"])
 def add():
-    db.session.add(Person(name=request.form['name']))
-    db.session.commit()
-    return redirect("/")
+    token = request.args.get("token")
+    if not valid(token):
+        return "Unauthorized", 401
 
-@app.route("/delete/<int:id>")
-def delete(id):
-    Person.query.filter_by(id=id).delete()
-    db.session.commit()
-    return redirect("/")
+    name = request.form.get("name")
 
-@app.route("/persons", methods=["POST"])
-def api_add():
-    p = Person(name=request.json["name"])
-    db.session.add(p)
-    db.session.commit()
-    return jsonify({"id":p.id,"name":p.name})
+    with get_db() as db:
+        db.execute("INSERT INTO persons(name) VALUES(?)", (name,))
+        db.commit()
 
+    return redirect("/?token=" + token)
+
+# --- API GET personne ---
 @app.route("/persons/<int:id>")
-def check(id):
-    p = Person.query.get(id)
-    if not p: return jsonify({"error":"Not found"}),404
-    return jsonify({"id":p.id})
+def api_get(id):
+    with get_db() as db:
+        p = db.execute("SELECT * FROM persons WHERE id=?", (id,)).fetchone()
 
-if __name__ == "__main__":
-    db.create_all()
-    app.run(host="0.0.0.0",port=5001)
+    return jsonify({"id": p[0], "name": p[1]}) if p else ("Not found", 404)
+
+# --- API DELETE ---
+@app.route("/persons/<int:id>", methods=["DELETE"])
+def api_delete(id):
+    with get_db() as db:
+        cur = db.execute("DELETE FROM persons WHERE id=?", (id,))
+        db.commit()
+
+    return ("Deleted", 200) if cur.rowcount else ("Not found", 404)
+
+app.run(host="0.0.0.0", port=5001)
