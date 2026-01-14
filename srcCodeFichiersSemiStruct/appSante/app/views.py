@@ -11,13 +11,29 @@ SECRET_KEY = "ITS_SECRET_2026"
 def home():
     return redirect('/login')
 
-# ---------- LOGIN ----------
+# ===================== LOGIN =====================
 @app.route('/login')
 def login_page():
     return render_template("login.html")
 
 @app.route('/login', methods=['POST'])
 def login():
+    """
+    Connexion admin
+    ---
+    parameters:
+      - name: username
+        in: formData
+        type: string
+        required: true
+      - name: password
+        in: formData
+        type: string
+        required: true
+    responses:
+      200:
+        description: Token JWT
+    """
     user = request.form['username']
     pwd = request.form['password']
 
@@ -32,13 +48,33 @@ def login():
     return "Accès refusé"
 
 
-# ---------- AJOUT PATIENT ----------
+# ===================== AJOUT PATIENT =====================
 @app.route('/new')
 def new():
     return render_template("new.html")
 
 @app.route('/new', methods=['POST'])
 def add_patient():
+    """
+    Ajouter un patient
+    ---
+    parameters:
+      - name: nom
+        in: formData
+        type: string
+        required: true
+      - name: adresse
+        in: formData
+        type: string
+        required: true
+      - name: pin
+        in: formData
+        type: string
+        required: true
+    responses:
+      200:
+        description: Patient ajouté
+    """
     nom = request.form['nom']
     adresse = request.form['adresse']
     pin = request.form['pin']
@@ -51,11 +87,23 @@ def add_patient():
     conn.close()
     return redirect('/new')
 
-# ---------- LISTE PROTÉGÉE ----------
+
+# ===================== LISTE PROTÉGÉE =====================
 @app.route('/list')
 def list_patients():
+    """
+    Liste des patients (JWT requis)
+    ---
+    parameters:
+      - name: token
+        in: query
+        type: string
+        required: true
+    responses:
+      200:
+        description: Liste patients
+    """
     token = request.args.get("token")
-
     if not token:
         return "Token requis"
 
